@@ -1,0 +1,52 @@
+nginx:
+  build: nginx
+  ports:
+    - "80:80"
+  links:
+    - app
+  volumes_from:
+    - sslstore
+  environment:
+    - SSL_DOMAINS="example.com,www.example.com,admin.example.com"
+    - SSL_EMAIL="you@example.com"
+sslstore:
+  build: nginx
+  volumes:
+    - "/etc/letsencrypt"
+  labels:
+    io.enonic.backup.data: "/etc/letsencrypt"
+app:
+  build: app
+  volumes:
+    - "$PWD/app:/usr/src/app"
+  ports:
+    - "8000:8000"
+  links:
+    - postgres
+  volumes_from:
+    - appstorage
+appstorage:
+  build: app
+  volumes:
+    - /storage
+  labels:
+    io.enonic.backup.data: "/storage"
+postgres:
+  build: postgres
+  restart: always
+  environment:
+    POSTGRES_PASSWORD: changethis_masterpostgres_pwd
+    PG_USER_DB_PASSWORD: thisIsMy1stSecretAPPdbpwd
+    PG_USER_DB_USERNAME: app
+    PG_USER_DB_DBNAME: app
+  labels:
+    io.enonic.backup.prescripts: "/usr/local/bin/backup-pre.sh"
+    io.enonic.backup.postscripts: "/usr/local/bin/backup-post.sh"
+    io.enonic.backup.data: "/backup"
+  volumes_from:
+    - postgresstorage
+postgresstorage:
+  image: postgres:9.4.1
+  command: "Postgres storage container"
+  volumes:
+    - /var/lib/postgresql/data
